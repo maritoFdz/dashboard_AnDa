@@ -118,6 +118,12 @@ def estilizar_grafico(fig, titulo, height=alto_fig):
     return fig
 
 
+def hex_a_rgba(color_hex, alpha):
+    color_hex = color_hex.lstrip("#")
+    r, g, b = tuple(int(color_hex[i:i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({r},{g},{b},{alpha})"
+
+
 def grafico_densidad_suave(data, variable, color_col, mapa_colores):
     fig = go.Figure()
     for categoria in mapa_colores:
@@ -131,7 +137,7 @@ def grafico_densidad_suave(data, variable, color_col, mapa_colores):
         fig.add_trace(go.Scatter(
             x=xs, y=ys, mode="lines", name=str(categoria),
             line=dict(color=color, width=2.5),
-            fill="tozeroy", fillcolor=color, opacity=0.55,
+            fill="tozeroy", fillcolor=hex_a_rgba(color, 0.30),
         ))
     fig.update_layout(xaxis_title=variable, yaxis_title="densidad")
     return fig
