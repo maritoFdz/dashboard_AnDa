@@ -1,0 +1,7 @@
+dash
+plotly
+pandas
+scikit-learn
+country_converter
+gunicorn
+ 
