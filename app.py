@@ -97,6 +97,13 @@ grid_style = {
     "rowGap": "25px",
 }
 
+mapa_grid_style = {
+    "display": "grid",
+    "gridTemplateColumns": "2fr 1fr",
+    "columnGap": "40px",
+    "rowGap": "25px",
+}
+
 pred_grid_style = {
     "display": "grid",
     "gridTemplateColumns": "1fr 1fr",
@@ -175,23 +182,50 @@ def grafico_densidad_suave(data, variable, color_col, mapa_colores):
     return fig
 
 
-fig_mapa_panama = px.choropleth_mapbox(
-    gdf_panama_merged,
-    geojson=gdf_panama_merged.__geo_interface__,
-    locations=gdf_panama_merged.index,
-    color="Cantidad de títulos",
-    color_continuous_scale=MAPA_COLORSCALE,
-    hover_name="shapeName",
-    hover_data={"Cantidad de títulos": ":,"},
-    mapbox_style="carto-positron",
-    zoom=6.3,
-    center={"lat": 8.5, "lon": -80.2},
-    opacity=0.85,
-)
-fig_mapa_panama = estilizar_grafico(
-    fig_mapa_panama, "Población con título universitario por distrito", height=520
-)
-fig_mapa_panama.update_layout(margin=dict(l=0, r=0, t=55, b=0))
+def construir_mapa_panama(distrito_sel):
+    fig = px.choropleth_mapbox(
+        gdf_panama_merged,
+        geojson=gdf_panama_merged.__geo_interface__,
+        locations=gdf_panama_merged.index,
+        color="Cantidad de títulos",
+        color_continuous_scale=MAPA_COLORSCALE,
+        hover_name="shapeName",
+        hover_data={"Cantidad de títulos": ":,"},
+        mapbox_style="carto-positron",
+        zoom=6.3,
+        center={"lat": 8.5, "lon": -80.2},
+        opacity=0.85,
+    )
+    if distrito_sel:
+        idx = gdf_panama_merged[gdf_panama_merged["shapeName"] == distrito_sel].index
+        if len(idx):
+            fig.add_trace(go.Choroplethmapbox(
+                geojson=gdf_panama_merged.__geo_interface__,
+                locations=idx,
+                z=[1],
+                colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
+                showscale=False,
+                marker_line_color="#C1666B",
+                marker_line_width=4,
+                hoverinfo="skip",
+            ))
+    fig = estilizar_grafico(fig, "Población con título universitario por distrito", height=520)
+    fig.update_layout(margin=dict(l=0, r=0, t=55, b=0))
+    return fig
+
+
+def construir_barras_panama(distrito_sel):
+    datos = gdf_panama_merged[["shapeName", "Cantidad de títulos"]].sort_values("Cantidad de títulos")
+    colores = ["#B8C6E8"] * len(datos)
+    if distrito_sel and distrito_sel in datos["shapeName"].values:
+        pos = list(datos["shapeName"]).index(distrito_sel)
+        colores[pos] = "#C1666B"
+    fig = px.bar(datos, x="Cantidad de títulos", y="shapeName", orientation="h")
+    fig.update_traces(marker_color=colores)
+    fig = estilizar_grafico(fig, "Ranking de distritos", height=520)
+    fig.update_layout(yaxis_title="", margin=dict(l=170, r=25, t=55, b=40))
+    return fig
+
 
 CUSTOM_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
@@ -363,9 +397,21 @@ app.layout = html.Div(style={"backgroundColor": "#F5EFE6", "padding": "30px 50px
 
         # Mapa
         dcc.Tab(label="Mapa", children=[
-            html.Div(style=card_style, children=[
-                html.H3("Título universitario en Panamá"),
-                dcc.Graph(id="mapa-panama-graph", figure=fig_mapa_panama),
+            html.Div(style=mapa_grid_style, children=[
+                html.Div(style=card_style, children=[
+                    html.H3("Título universitario en Panamá"),
+                    html.Label("Distrito"),
+                    dcc.Dropdown(
+                        id="mapa-distrito-dropdown",
+                        options=[{"label": d.title(), "value": d} for d in sorted(gdf_panama_merged["shapeName"].unique())],
+                        value=None, placeholder="Todos los distritos...", clearable=True,
+                    ),
+                    dcc.Graph(id="mapa-panama-graph"),
+                ]),
+                html.Div(style=card_style, children=[
+                    html.H3("Ranking por distrito"),
+                    dcc.Graph(id="mapa-panama-barras"),
+                ]),
             ]),
         ]),
 
@@ -468,6 +514,16 @@ def actualizar_scatter_america(var_x, var_y):
     fig = px.scatter(df_america, x=var_x, y=var_y, color="Region",
                       color_discrete_map=AMERICA_COLORS, opacity=0.7)
     return estilizar_grafico(fig, f"{var_y} vs {var_x}")
+
+
+# Mapa
+@app.callback(
+    Output("mapa-panama-graph", "figure"),
+    Output("mapa-panama-barras", "figure"),
+    Input("mapa-distrito-dropdown", "value"),
+)
+def actualizar_mapa_panama(distrito_sel):
+    return construir_mapa_panama(distrito_sel), construir_barras_panama(distrito_sel)
 
 
 # Prediccion
