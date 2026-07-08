@@ -48,7 +48,13 @@ randomForestRegressor.fit(X_train, Y_train)
 
 input_cols = [c for c in train_cols if c != "Continent"]
 
-alto_fig = 400  # alto compacto para que las gráficas no queden gigantes
+alto_fig = 350  # alto compacto para que las gráficas no queden gigantes
+
+grid_style = {
+    "display": "grid",
+    "gridTemplateColumns": "1fr 1fr",
+    "columnGap": "40px",
+}
 
 
 # Dashboard
@@ -63,80 +69,104 @@ app.layout = html.Div([
     dcc.Tabs([
         # Por Continentetes
         dcc.Tab(label="Mundial", children=[
-            html.H3("Distribución de una variable"),
-            html.Label("Variable"),
-            dcc.Dropdown(id="mun-dist-var", options=var_options, value="Life Ladder", clearable=False),
-            html.Label("Tipo de gráfico"),
-            dcc.RadioItems(
-                id="mun-dist-tipo",
-                options=[{"label": "Densidad", "value": "densidad"}, {"label": "Violín", "value": "violin"}],
-                value="densidad", inline=True,
-            ),
-            dcc.Graph(id="mun-dist-graph"),
+            html.Div(style=grid_style, children=[
 
-            html.H3("Matriz de correlación"),
-            html.Label("Continente"),
-            dcc.Dropdown(
-                id="mun-corr-continente",
-                options=[{"label": "Todos", "value": "Todos"}] + [{"label": c, "value": c} for c in continents],
-                value="Todos", clearable=False,
-            ),
-            dcc.Graph(id="mun-corr-graph"),
+                html.Div([
+                    html.H3("Distribución de una variable"),
+                    html.Label("Variable"),
+                    dcc.Dropdown(id="mun-dist-var", options=var_options, value="Life Ladder", clearable=False),
+                    html.Label("Tipo de gráfico"),
+                    dcc.RadioItems(
+                        id="mun-dist-tipo",
+                        options=[{"label": "Densidad", "value": "densidad"}, {"label": "Violín", "value": "violin"}],
+                        value="densidad", inline=True,
+                    ),
+                    dcc.Graph(id="mun-dist-graph"),
+                ]),
 
-            html.H3("Evolución temporal de Life Ladder"),
-            html.Label("Continentes a mostrar"),
-            dcc.Checklist(
-                id="mun-evo-checklist",
-                options=[{"label": c, "value": c} for c in continents],
-                value=continents, inline=True,
-            ),
-            dcc.Graph(id="mun-evo-graph"),
+                html.Div([
+                    html.H3("Relación entre dos variables"),
+                    html.Label("Variable X"),
+                    dcc.Dropdown(id="mun-scatter-x", options=var_options, value="Log GDP per capita", clearable=False),
+                    html.Label("Variable Y"),
+                    dcc.Dropdown(id="mun-scatter-y", options=var_options, value="Life Ladder", clearable=False),
+                    dcc.Graph(id="mun-scatter-graph"),
+                ]),
 
-            html.H3("Relación entre dos variables"),
-            html.Label("Variable X"),
-            dcc.Dropdown(id="mun-scatter-x", options=var_options, value="Log GDP per capita", clearable=False),
-            html.Label("Variable Y"),
-            dcc.Dropdown(id="mun-scatter-y", options=var_options, value="Life Ladder", clearable=False),
-            dcc.Graph(id="mun-scatter-graph"),
+                html.Div([
+                    html.H3("Matriz de correlación"),
+                    html.Label("Continente"),
+                    dcc.Dropdown(
+                        id="mun-corr-continente",
+                        options=[{"label": "Todos", "value": "Todos"}] + [{"label": c, "value": c} for c in continents],
+                        value="Todos", clearable=False,
+                    ),
+                    dcc.Graph(id="mun-corr-graph"),
+                ]),
+
+                html.Div([
+                    html.H3("Evolución temporal de Life Ladder"),
+                    html.Label("Continentes a mostrar"),
+                    dcc.Checklist(
+                        id="mun-evo-checklist",
+                        options=[{"label": c, "value": c} for c in continents],
+                        value=continents, inline=True,
+                    ),
+                    dcc.Graph(id="mun-evo-graph"),
+                ]),
+
+            ]),
         ]),
 
         # America
         dcc.Tab(label="América", children=[
-            html.H3("Distribución de una variable"),
-            html.Label("Variable"),
-            dcc.Dropdown(id="am-dist-var", options=var_options, value="Life Ladder", clearable=False),
-            html.Label("Tipo de gráfico"),
-            dcc.RadioItems(
-                id="am-dist-tipo",
-                options=[{"label": "Densidad", "value": "densidad"}, {"label": "Violín", "value": "violin"}],
-                value="densidad", inline=True,
-            ),
-            dcc.Graph(id="am-dist-graph"),
+            html.Div(style=grid_style, children=[
 
-            html.H3("Matriz de correlación"),
-            html.Label("Región"),
-            dcc.Dropdown(
-                id="am-corr-region",
-                options=[{"label": "Todas", "value": "Todos"}] + [{"label": r, "value": r} for r in regiosen],
-                value="Todos", clearable=False,
-            ),
-            dcc.Graph(id="am-corr-graph"),
+                html.Div([
+                    html.H3("Distribución de una variable"),
+                    html.Label("Variable"),
+                    dcc.Dropdown(id="am-dist-var", options=var_options, value="Life Ladder", clearable=False),
+                    html.Label("Tipo de gráfico"),
+                    dcc.RadioItems(
+                        id="am-dist-tipo",
+                        options=[{"label": "Densidad", "value": "densidad"}, {"label": "Violín", "value": "violin"}],
+                        value="densidad", inline=True,
+                    ),
+                    dcc.Graph(id="am-dist-graph"),
+                ]),
 
-            html.H3("Evolución temporal de Life Ladder"),
-            html.Label("Regiones a mostrar"),
-            dcc.Checklist(
-                id="am-evo-checklist",
-                options=[{"label": r, "value": r} for r in regiosen],
-                value=regiosen, inline=True,
-            ),
-            dcc.Graph(id="am-evo-graph"),
+                html.Div([
+                    html.H3("Relación entre dos variables"),
+                    html.Label("Variable X"),
+                    dcc.Dropdown(id="am-scatter-x", options=var_options, value="Social support", clearable=False),
+                    html.Label("Variable Y"),
+                    dcc.Dropdown(id="am-scatter-y", options=var_options, value="Life Ladder", clearable=False),
+                    dcc.Graph(id="am-scatter-graph"),
+                ]),
 
-            html.H3("Relación entre dos variables"),
-            html.Label("Variable X"),
-            dcc.Dropdown(id="am-scatter-x", options=var_options, value="Social support", clearable=False),
-            html.Label("Variable Y"),
-            dcc.Dropdown(id="am-scatter-y", options=var_options, value="Life Ladder", clearable=False),
-            dcc.Graph(id="am-scatter-graph"),
+                html.Div([
+                    html.H3("Matriz de correlación"),
+                    html.Label("Región"),
+                    dcc.Dropdown(
+                        id="am-corr-region",
+                        options=[{"label": "Todas", "value": "Todos"}] + [{"label": r, "value": r} for r in regiosen],
+                        value="Todos", clearable=False,
+                    ),
+                    dcc.Graph(id="am-corr-graph"),
+                ]),
+
+                html.Div([
+                    html.H3("Evolución temporal de Life Ladder"),
+                    html.Label("Regiones a mostrar"),
+                    dcc.Checklist(
+                        id="am-evo-checklist",
+                        options=[{"label": r, "value": r} for r in regiosen],
+                        value=regiosen, inline=True,
+                    ),
+                    dcc.Graph(id="am-evo-graph"),
+                ]),
+
+            ]),
         ]),
 
         # Mapa
@@ -252,7 +282,7 @@ def actualizar_scatter_america(var_x, var_y):
     *[State(f"pred-{i}", "value") for i in range(len(input_cols))],
     prevent_initial_call=True,
 )
-def predecir(n_clicks, continente, *valores):
+def predecir(continente, *valores):
     if any(v is None for v in valores):
         return "Por favor completa todos los campos."
 
@@ -264,7 +294,7 @@ def predecir(n_clicks, continente, *valores):
     entrada_esc = scaler.transform(entrada.values)
     prediccion = randomForestRegressor.predict(entrada_esc)[0]
 
-    return f"Nivel de felicidad estimado: {prediccion:.2f}"
+    return f"Nivel de felicidad estimado: {prediccion}"
 
 if __name__ == "__main__":
     app.run(debug=True)
