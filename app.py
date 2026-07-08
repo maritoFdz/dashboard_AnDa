@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import unicodedata
+import geopandas as gpd
 import country_converter as coco
 import plotly.express as px
 import plotly.graph_objects as go
@@ -27,6 +29,31 @@ num_cols = [c for c in df.select_dtypes(include="number").columns if c != "year"
 continents = sorted(df_mundial["Continent"].unique())
 regiosen = sorted(df_america["Region"].dropna().unique())
 var_options = [{"label": c, "value": c} for c in num_cols]
+
+# Carga del mapa de Panamá
+
+def corregir_utf8(texto):
+    try:
+        return texto.encode("latin1").decode("utf-8")
+    except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
+        return texto
+
+
+def normalizar_texto(texto):
+    return " ".join(str(texto).strip().upper().split())
+
+
+gdf_panama = gpd.read_file("zip://./geoBoundaries-PAN-ADM2-all.zip")
+df_titulos = pd.read_csv("datos_sociodemográfica_población_título_universitario_con_título_universitario_distritos.csv")
+df_titulos = df_titulos[["Nombre Distrito", "Valor"]].rename(columns={"Valor": "Cantidad de títulos"})
+
+gdf_panama["shapeName"] = gdf_panama["shapeName"].apply(corregir_utf8).apply(normalizar_texto)
+df_titulos["Nombre Distrito"] = df_titulos["Nombre Distrito"].apply(normalizar_texto)
+df_titulos["Nombre Distrito"] = df_titulos["Nombre Distrito"].replace("SANTA FE", "SANTA FÉ")
+
+gdf_panama_merged = gdf_panama.merge(df_titulos, left_on="shapeName", right_on="Nombre Distrito", how="left")
+gdf_panama_merged = gdf_panama_merged.drop_duplicates(subset="shapeName")
+gdf_panama_merged = gdf_panama_merged.dropna(subset=["Cantidad de títulos"])
 
 # Entrenado del modelo
 label = LabelEncoder()
@@ -58,6 +85,7 @@ PALETA_PASTEL = ["#A8D8C9", "#F4B6AE", "#B8C6E8", "#F4E1A1", "#D9BFE0", "#F7C9A3
 MUNDIAL_COLORS = {c: PALETA_PASTEL[i % len(PALETA_PASTEL)] for i, c in enumerate(continents)}
 AMERICA_COLORS = {r: PALETA_PASTEL[i % len(PALETA_PASTEL)] for i, r in enumerate(regiosen)}
 CORR_COLORSCALE = [[0, "#F4B6AE"], [0.5, "#FBF7F0"], [1, "#9ED8C4"]]
+MAPA_COLORSCALE = [[0, "#FBF7F0"], [0.5, "#D9BFE0"], [1, "#7A6A9E"]]
 
 grid_style = {
     "display": "grid",
@@ -143,6 +171,24 @@ def grafico_densidad_suave(data, variable, color_col, mapa_colores):
     fig.update_layout(xaxis_title=variable, yaxis_title="densidad")
     return fig
 
+
+fig_mapa_panama = px.choropleth_mapbox(
+    gdf_panama_merged,
+    geojson=gdf_panama_merged.__geo_interface__,
+    locations=gdf_panama_merged.index,
+    color="Cantidad de títulos",
+    color_continuous_scale=MAPA_COLORSCALE,
+    hover_name="shapeName",
+    hover_data={"Cantidad de títulos": ":,"},
+    mapbox_style="carto-positron",
+    zoom=6.3,
+    center={"lat": 8.5, "lon": -80.2},
+    opacity=0.85,
+)
+fig_mapa_panama = estilizar_grafico(
+    fig_mapa_panama, "Población con título universitario por distrito", height=520
+)
+fig_mapa_panama.update_layout(margin=dict(l=0, r=0, t=55, b=0))
 
 CUSTOM_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
@@ -315,8 +361,8 @@ app.layout = html.Div(style={"backgroundColor": "#F5EFE6", "padding": "30px 50px
         # Mapa
         dcc.Tab(label="Mapa", children=[
             html.Div(style=card_style, children=[
-                html.H3("Mapa mundial interactivo"),
-                html.P("Pendiente."),
+                html.H3("Título universitario en Panamá"),
+                dcc.Graph(id="mapa-panama-graph", figure=fig_mapa_panama),
             ]),
         ]),
 

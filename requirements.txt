@@ -1,8 +1,13 @@
-dash
 pandas
+numpy
+geopandas
+pyogrio
+shapely
+pyproj
+fiona
 country_converter
-seaborn
-matplotlib
+plotly
+scipy
+dash
 scikit-learn
 gunicorn
-plotly
