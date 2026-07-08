@@ -1,7 +1,8 @@
 dash
-plotly
 pandas
-scikit-learn
 country_converter
+seaborn
+matplotlib
+scikit-learn
 gunicorn
- 
+plotly
