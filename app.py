@@ -44,7 +44,7 @@ def normalizar_texto(texto):
     return " ".join(str(texto).strip().upper().split())
 
 
-gdf_panama = gpd.read_file("zip://./geoBoundaries-PAN-ADM2-all.zip")
+gdf_panama = gpd.read_file("zip://./geoBoundaries-PAN-ADM2-all.zip", layer="geoBoundaries-PAN-ADM2_simplified")
 df_titulos = pd.read_csv("datos_sociodemográfica_población_título_universitario_con_título_universitario_distritos.csv")
 df_titulos = df_titulos[["Nombre Distrito", "Valor"]].rename(columns={"Valor": "Cantidad de títulos"})
 
@@ -490,7 +490,7 @@ def predecir(n_clicks, continente, *valores):
     entrada_esc = scaler.transform(entrada.values)
     prediccion = randomForestRegressor.predict(entrada_esc)[0]
 
-    return f"Nivel de felicidad estimado: {prediccion:.2F}"
+    return f"Nivel de felicidad estimado: {prediccion:.2f}"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False) # para intetnar ahorrar memoria
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
