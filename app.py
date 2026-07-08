@@ -126,12 +126,15 @@ def hex_a_rgba(color_hex, alpha):
 
 def grafico_densidad_suave(data, variable, color_col, mapa_colores):
     fig = go.Figure()
+    completos = data[variable].dropna()
+    ancho_banda = completos.std() * (len(completos) ** (-1 / 5))
+    xs = np.linspace(completos.min(), completos.max(), 200)
     for categoria in mapa_colores:
         muestra = data.loc[data[color_col] == categoria, variable].dropna()
-        if len(muestra) < 2 or muestra.nunique() < 2:
+        if len(muestra) < 2 or muestra.std() == 0:
             continue
-        kde = gaussian_kde(muestra)
-        xs = np.linspace(muestra.min(), muestra.max(), 200)
+        factor = max(ancho_banda / muestra.std(), 0.15)
+        kde = gaussian_kde(muestra, bw_method=factor)
         ys = kde(xs)
         color = mapa_colores[categoria]
         fig.add_trace(go.Scatter(
