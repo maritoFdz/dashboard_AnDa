@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 import unicodedata
 import geopandas as gpd
 import country_converter as coco
@@ -75,6 +76,8 @@ X_test = scaler.transform(X_test)
 
 randomForestRegressor = RandomForestRegressor(n_jobs=2, random_state=0)
 randomForestRegressor.fit(X_train, Y_train)
+
+del X_train, X_test, Y_train, Y_test, X, Y, df_encoded
 
 input_cols = [c for c in train_cols if c != "Continent"]
 slider_cols = ["Perceptions of corruption", "Positive affect", "Negative affect"]
@@ -487,7 +490,7 @@ def predecir(n_clicks, continente, *valores):
     entrada_esc = scaler.transform(entrada.values)
     prediccion = randomForestRegressor.predict(entrada_esc)[0]
 
-    return f"Nivel de felicidad estimado: {prediccion:.2f}"
+    return f"Nivel de felicidad estimado: {prediccion:.2F}"
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False) # para intetnar ahorrar memoria
