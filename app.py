@@ -47,6 +47,7 @@ randomForestRegressor = RandomForestRegressor(n_jobs=2, random_state=0)
 randomForestRegressor.fit(X_train, Y_train)
 
 input_cols = [c for c in train_cols if c != "Continent"]
+slider_cols = ["Perceptions of corruption", "Positive affect", "Negative affect"]
 
 alto_fig = 350  # alto compacto para que las gráficas no queden gigantes
 
@@ -54,6 +55,13 @@ grid_style = {
     "display": "grid",
     "gridTemplateColumns": "1fr 1fr",
     "columnGap": "40px",
+}
+
+pred_grid_style = {
+    "display": "grid",
+    "gridTemplateColumns": "1fr 1fr",
+    "columnGap": "40px",
+    "rowGap": "15px",
 }
 
 
@@ -184,13 +192,17 @@ app.layout = html.Div([
             dcc.Dropdown(id="pred-continente", options=[{"label": c, "value": c} for c in continents],
                          value=continents[0], clearable=False),
 
-            *[
+            html.Div(style=pred_grid_style, children=[
                 html.Div([
                     html.Label(col),
+                    dcc.Slider(id=f"pred-{i}", min=0, max=1, step=0.01,
+                               value=round(float(df[col].median()), 2),
+                               tooltip={"placement": "bottom", "always_visible": False})
+                    if col in slider_cols else
                     dcc.Input(id=f"pred-{i}", type="number", value=round(float(df[col].median()), 2), step=0.01),
                 ])
                 for i, col in enumerate(input_cols)
-            ],
+            ]),
 
             html.Button("Predecir", id="pred-boton", n_clicks=0),
             html.Div(id="pred-resultado"),
@@ -282,7 +294,7 @@ def actualizar_scatter_america(var_x, var_y):
     *[State(f"pred-{i}", "value") for i in range(len(input_cols))],
     prevent_initial_call=True,
 )
-def predecir(continente, *valores):
+def predecir(n_clicks, continente, *valores):
     if any(v is None for v in valores):
         return "Por favor completa todos los campos."
 
