@@ -1,20 +1,12 @@
-import copy
-import io
-import base64
-
 import pandas as pd
 import country_converter as coco
-import seaborn as sns
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 from dash import Dash, dcc, html, Input, Output, State
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.ensemble import RandomForestRegressor
-
-sns.set_theme(style="whitegrid")
+import copy
 
 # Carga del dataset
 
@@ -56,18 +48,7 @@ randomForestRegressor.fit(X_train, Y_train)
 
 input_cols = [c for c in train_cols if c != "Continent"]
 
-# dash necesita imagenes pero usar seaborn es super practcio asi que esto convierte lo de seaborn en fotos para dash
-def fig_to_src(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", dpi=110)
-    plt.close(fig)
-    buf.seek(0)
-    data = base64.b64encode(buf.read()).decode("utf-8")
-    return f"data:image/png;base64,{data}"
-
-
-tam_fig = (7, 4)          # tamaño compacto para las gráficas normales
-tam_corr = (6, 5)     # tamaño para la matriz de correlación (más cuadrada)
+alto_fig = 400  # alto compacto para que las gráficas no queden gigantes
 
 
 # Dashboard
@@ -91,7 +72,7 @@ app.layout = html.Div([
                 options=[{"label": "Densidad", "value": "densidad"}, {"label": "Violín", "value": "violin"}],
                 value="densidad", inline=True,
             ),
-            html.Img(id="mun-dist-graph"),
+            dcc.Graph(id="mun-dist-graph"),
 
             html.H3("Matriz de correlación"),
             html.Label("Continente"),
@@ -100,7 +81,7 @@ app.layout = html.Div([
                 options=[{"label": "Todos", "value": "Todos"}] + [{"label": c, "value": c} for c in continents],
                 value="Todos", clearable=False,
             ),
-            html.Img(id="mun-corr-graph"),
+            dcc.Graph(id="mun-corr-graph"),
 
             html.H3("Evolución temporal de Life Ladder"),
             html.Label("Continentes a mostrar"),
@@ -109,14 +90,14 @@ app.layout = html.Div([
                 options=[{"label": c, "value": c} for c in continents],
                 value=continents, inline=True,
             ),
-            html.Img(id="mun-evo-graph"),
+            dcc.Graph(id="mun-evo-graph"),
 
             html.H3("Relación entre dos variables"),
             html.Label("Variable X"),
             dcc.Dropdown(id="mun-scatter-x", options=var_options, value="Log GDP per capita", clearable=False),
             html.Label("Variable Y"),
             dcc.Dropdown(id="mun-scatter-y", options=var_options, value="Life Ladder", clearable=False),
-            html.Img(id="mun-scatter-graph"),
+            dcc.Graph(id="mun-scatter-graph"),
         ]),
 
         # America
@@ -130,7 +111,7 @@ app.layout = html.Div([
                 options=[{"label": "Densidad", "value": "densidad"}, {"label": "Violín", "value": "violin"}],
                 value="densidad", inline=True,
             ),
-            html.Img(id="am-dist-graph"),
+            dcc.Graph(id="am-dist-graph"),
 
             html.H3("Matriz de correlación"),
             html.Label("Región"),
@@ -139,7 +120,7 @@ app.layout = html.Div([
                 options=[{"label": "Todas", "value": "Todos"}] + [{"label": r, "value": r} for r in regiosen],
                 value="Todos", clearable=False,
             ),
-            html.Img(id="am-corr-graph"),
+            dcc.Graph(id="am-corr-graph"),
 
             html.H3("Evolución temporal de Life Ladder"),
             html.Label("Regiones a mostrar"),
@@ -148,14 +129,14 @@ app.layout = html.Div([
                 options=[{"label": r, "value": r} for r in regiosen],
                 value=regiosen, inline=True,
             ),
-            html.Img(id="am-evo-graph"),
+            dcc.Graph(id="am-evo-graph"),
 
             html.H3("Relación entre dos variables"),
             html.Label("Variable X"),
             dcc.Dropdown(id="am-scatter-x", options=var_options, value="Social support", clearable=False),
             html.Label("Variable Y"),
             dcc.Dropdown(id="am-scatter-y", options=var_options, value="Life Ladder", clearable=False),
-            html.Img(id="am-scatter-graph"),
+            dcc.Graph(id="am-scatter-graph"),
         ]),
 
         # Mapa
@@ -190,82 +171,77 @@ app.layout = html.Div([
 # Callbacks
 
 # Mundial
-@app.callback(Output("mun-dist-graph", "src"), Input("mun-dist-var", "value"), Input("mun-dist-tipo", "value"))
+@app.callback(Output("mun-dist-graph", "figure"), Input("mun-dist-var", "value"), Input("mun-dist-tipo", "value"))
 def actualizar_dist_mundial(variable, tipo):
-    fig, ax = plt.subplots(figsize=tam_fig)
     if tipo == "densidad":
-        sns.kdeplot(data=df_mundial, x=variable, hue="Continent", palette="deep", ax=ax)
+        fig = px.histogram(df_mundial, x=variable, color="Continent", histnorm="probability density",
+                            opacity=0.5, barmode="overlay", nbins=40)
     else:
-        sns.violinplot(data=df_mundial, x="Continent", y=variable, hue="Continent", palette="deep", ax=ax)
-    ax.set_title(f"Distribución de {variable} por continente")
-    return fig_to_src(fig)
+        fig = px.violin(df_mundial, x="Continent", y=variable, color="Continent", box=True)
+    fig.update_layout(title=f"Distribución de {variable} por continente", height=alto_fig)
+    return fig
 
 
-@app.callback(Output("mun-corr-graph", "src"), Input("mun-corr-continente", "value"))
+@app.callback(Output("mun-corr-graph", "figure"), Input("mun-corr-continente", "value"))
 def actualizar_corr_mundial(continente):
     data = df_mundial if continente == "Todos" else df_mundial[df_mundial["Continent"] == continente]
     corr = data[num_cols].corr()
-    fig, ax = plt.subplots(figsize=tam_corr)
-    sns.heatmap(corr, cmap="RdBu", annot=True, fmt=".2f", cbar=False, ax=ax)
-    ax.set_title(f"Correlación entre variables ({continente})")
-    return fig_to_src(fig)
+    fig = px.imshow(corr, text_auto=".2f", color_continuous_scale="RdBu_r", zmin=-1, zmax=1)
+    fig.update_layout(title=f"Correlación entre variables ({continente})", height=alto_fig + 100)
+    return fig
 
 
-@app.callback(Output("mun-evo-graph", "src"), Input("mun-evo-checklist", "value"))
+@app.callback(Output("mun-evo-graph", "figure"), Input("mun-evo-checklist", "value"))
 def actualizar_evo_mundial(continentes_sel):
     data = df_mundial[df_mundial["Continent"].isin(continentes_sel)]
-    fig, ax = plt.subplots(figsize=tam_fig)
-    sns.lineplot(data=data, x="year", y="Life Ladder", hue="Continent", palette="deep", marker="o", ax=ax)
-    ax.set_title("Evolución de Life Ladder promedio por continente")
-    return fig_to_src(fig)
+    resumen = data.groupby(["year", "Continent"], as_index=False)["Life Ladder"].mean()
+    fig = px.line(resumen, x="year", y="Life Ladder", color="Continent", markers=True)
+    fig.update_layout(title="Evolución de Life Ladder promedio por continente", height=alto_fig)
+    return fig
 
 
-@app.callback(Output("mun-scatter-graph", "src"), Input("mun-scatter-x", "value"), Input("mun-scatter-y", "value"))
+@app.callback(Output("mun-scatter-graph", "figure"), Input("mun-scatter-x", "value"), Input("mun-scatter-y", "value"))
 def actualizar_scatter_mundial(var_x, var_y):
-    fig, ax = plt.subplots(figsize=tam_fig)
-    sns.scatterplot(data=df_mundial, x=var_x, y=var_y, hue="Continent", palette="deep", ax=ax)
-    ax.set_title(f"{var_y} vs {var_x}")
-    return fig_to_src(fig)
+    fig = px.scatter(df_mundial, x=var_x, y=var_y, color="Continent", opacity=0.7)
+    fig.update_layout(title=f"{var_y} vs {var_x}", height=alto_fig)
+    return fig
 
 
 # America
-@app.callback(Output("am-dist-graph", "src"), Input("am-dist-var", "value"), Input("am-dist-tipo", "value"))
+@app.callback(Output("am-dist-graph", "figure"), Input("am-dist-var", "value"), Input("am-dist-tipo", "value"))
 def actualizar_dist_america(variable, tipo):
-    fig, ax = plt.subplots(figsize=tam_fig)
     if tipo == "densidad":
-        sns.kdeplot(data=df_america, x=variable, hue="Region", palette="Set2", ax=ax)
+        fig = px.histogram(df_america, x=variable, color="Region", histnorm="probability density",
+                            opacity=0.5, barmode="overlay", nbins=40)
     else:
-        sns.violinplot(data=df_america, x="Region", y=variable, hue="Region", palette="Set2", ax=ax)
-        ax.tick_params(axis="x", rotation=20)
-    ax.set_title(f"Distribución de {variable} por región de América")
-    return fig_to_src(fig)
+        fig = px.violin(df_america, x="Region", y=variable, color="Region", box=True)
+    fig.update_layout(title=f"Distribución de {variable} por región de América", height=alto_fig)
+    return fig
 
 
-@app.callback(Output("am-corr-graph", "src"), Input("am-corr-region", "value"))
+@app.callback(Output("am-corr-graph", "figure"), Input("am-corr-region", "value"))
 def actualizar_corr_america(region):
     data = df_america if region == "Todos" else df_america[df_america["Region"] == region]
     corr = data[num_cols].corr()
-    fig, ax = plt.subplots(figsize=tam_corr)
-    sns.heatmap(corr, cmap=sns.cubehelix_palette(hue=1, as_cmap=True), annot=True, fmt=".2f", cbar=False, ax=ax)
-    ax.set_title(f"Correlación entre variables ({region})")
-    return fig_to_src(fig)
+    fig = px.imshow(corr, text_auto=".2f", color_continuous_scale="RdBu_r", zmin=-1, zmax=1)
+    fig.update_layout(title=f"Correlación entre variables ({region})", height=alto_fig + 100)
+    return fig
 
 
-@app.callback(Output("am-evo-graph", "src"), Input("am-evo-checklist", "value"))
+@app.callback(Output("am-evo-graph", "figure"), Input("am-evo-checklist", "value"))
 def actualizar_evo_america(regiones_sel):
     data = df_america[df_america["Region"].isin(regiones_sel)]
-    fig, ax = plt.subplots(figsize=tam_fig)
-    sns.lineplot(data=data, x="year", y="Life Ladder", hue="Region", palette="Set2", marker="o", ax=ax)
-    ax.set_title("Evolución de Life Ladder promedio por región de América")
-    return fig_to_src(fig)
+    resumen = data.groupby(["year", "Region"], as_index=False)["Life Ladder"].mean()
+    fig = px.line(resumen, x="year", y="Life Ladder", color="Region", markers=True)
+    fig.update_layout(title="Evolución de Life Ladder promedio por región de América", height=alto_fig)
+    return fig
 
 
-@app.callback(Output("am-scatter-graph", "src"), Input("am-scatter-x", "value"), Input("am-scatter-y", "value"))
+@app.callback(Output("am-scatter-graph", "figure"), Input("am-scatter-x", "value"), Input("am-scatter-y", "value"))
 def actualizar_scatter_america(var_x, var_y):
-    fig, ax = plt.subplots(figsize=tam_fig)
-    sns.scatterplot(data=df_america, x=var_x, y=var_y, hue="Region", palette="Set2", ax=ax)
-    ax.set_title(f"{var_y} vs {var_x}")
-    return fig_to_src(fig)
+    fig = px.scatter(df_america, x=var_x, y=var_y, color="Region", opacity=0.7)
+    fig.update_layout(title=f"{var_y} vs {var_x}", height=alto_fig)
+    return fig
 
 
 # Prediccion
